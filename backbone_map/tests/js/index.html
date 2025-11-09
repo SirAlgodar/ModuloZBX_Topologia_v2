@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Tests - Mapa Backbone</title>
+  <link rel="stylesheet" href="https://code.jquery.com/qunit/qunit-2.19.4.css">
+</head>
+<body>
+  <div id="qunit"></div>
+  <div id="qunit-fixture"></div>
+  <script src="https://code.jquery.com/qunit/qunit-2.19.4.js"></script>
+  <script src="../../js/api.js"></script>
+  <script>
+    QUnit.module('API LocalStorage Fallback');
+
+    QUnit.test('Salvar e buscar linha', async assert => {
+      const line = { id: 't1', name: 'Teste', coords: [[0,0],[1,1]], hosts: [{id:'h1',name:'A'},{id:'h2',name:'B'}] };
+      const r = await ModuleAPI.saveLine(line);
+      assert.ok(r.ok, 'salvou ok');
+      const lines = await ModuleAPI.getLines();
+      assert.ok(lines.find(l => l.id === 't1'), 'linha recuperada');
+    });
+
+    QUnit.test('Versionamento config', async assert => {
+      const before = await ModuleAPI.getConfig();
+      const r = await ModuleAPI.saveConfig({ logLevel: 'debug' });
+      assert.ok(r.ok, 'config salva');
+      const after = await ModuleAPI.getConfig();
+      assert.ok((after.versions?.length || 0) >= (before.versions?.length || 0), 'versão adicionada');
+    });
+  </script>
+</body>
+</html>

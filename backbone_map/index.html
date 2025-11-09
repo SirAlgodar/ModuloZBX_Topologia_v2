@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zabbix Módulo - Mapa Backbone</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhI+JdCkJrP6v8z6WZbG3jH0CwYf2gPXY0X4=" crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" crossorigin="" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1 class="app-title"><span class="logo-icon" aria-hidden="true"></span> Mapa Backbone</h1>
+    <div class="header-actions" role="status" aria-live="polite">
+      <span class="zbx-version">Compatível Zabbix 7.0 LTS (protótipo)</span>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Navegação principal">
+    <div class="tabs-left">
+      <button class="tab-button active" data-tab="backbone" aria-controls="tab-backbone"><i class="fa-solid fa-network-wired"></i> Backbone</button>
+      <button class="tab-button" data-tab="topologia" aria-controls="tab-topologia"><i class="fa-solid fa-diagram-project"></i> Topologia</button>
+    </div>
+    <div class="tabs-right">
+      <div class="config-menu" aria-haspopup="true" aria-expanded="false">
+        <button id="config-menu-toggle" class="config-button" aria-label="Abrir menu de configuração">
+          <i class="fa-solid fa-gear"></i>
+          <span>Configuração</span>
+          <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+        <div id="config-dropdown" class="config-dropdown" role="menu">
+          <button class="dropdown-item" data-tab="configuracao" role="menuitem"><i class="fa-solid fa-sliders"></i> Parâmetros do Módulo</button>
+          <button class="dropdown-item" data-tab="db" role="menuitem"><i class="fa-solid fa-database"></i> Banco de Dados</button>
+          <button class="dropdown-item" data-tab="mapcenter" role="menuitem"><i class="fa-solid fa-location-dot"></i> Centro Inicial do Mapa</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="tab-content">
+    <!-- Aba Backbone -->
+    <section id="tab-backbone" class="tab-panel active">
+      <div class="panel">
+        <div id="map" class="map"></div>
+        <aside id="editor-panel" class="editor-panel">
+          <div id="incident-panel" class="incident-panel">
+            <div class="incident-header">
+              <h2><i class="fa-solid fa-bell"></i> Incidentes Ativos</h2>
+              <button id="add-line-btn" class="add-line-btn"><i class="fa-solid fa-plus"></i> Adicionar nova linha</button>
+            </div>
+            <table id="incident-table" class="incident-table" aria-label="Incidentes ativos">
+              <thead>
+                <tr>
+                  <th data-sort="host">Host <i class="fa-solid fa-sort" aria-hidden="true"></i></th>
+                  <th data-sort="status">Status <i class="fa-solid fa-sort" aria-hidden="true"></i></th>
+                  <th data-sort="priority">Prioridade <i class="fa-solid fa-sort" aria-hidden="true"></i></th>
+                  <th data-sort="updated">Última atualização <i class="fa-solid fa-sort" aria-hidden="true"></i></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div id="line-editor-container" class="hidden">
+            <h2>Configuração da Linha</h2>
+            <form id="line-form">
+            <label>
+              Nome da linha
+              <input type="text" id="line-name" placeholder="Ex.: Rota MPLS Norte" required />
+            </label>
+
+            <label>
+              Seleção de host
+              <input type="text" id="host-search" placeholder="Buscar host" />
+              <select id="host-select"></select>
+            </label>
+
+            <label>
+              Seleção de interface
+              <select id="interface-select">
+                <option value="in">In</option>
+                <option value="out">Out</option>
+                <option value="sum">Soma</option>
+              </select>
+            </label>
+
+            <fieldset>
+              <legend>Configuração de Traceroute para alarmes</legend>
+              <label>
+                Host destino
+                <input type="text" id="traceroute-target" placeholder="Ex.: 10.0.0.1" />
+              </label>
+              <label>
+                Limite de hops
+                <input type="number" id="traceroute-hops" min="1" value="30" />
+              </label>
+            </fieldset>
+
+            <fieldset>
+              <legend>Itens adicionais para monitoramento</legend>
+              <div id="items-checkboxes" class="items-checkboxes"></div>
+            </fieldset>
+
+            <div class="form-actions">
+              <button type="button" id="save-line" class="primary">Salvar linha</button>
+              <button type="button" id="delete-line" class="danger">Excluir linha</button>
+            </div>
+            </form>
+          </div>
+
+          <hr />
+          <h3>Camadas de Rotas</h3>
+          <div id="layers-panel"></div>
+          <div class="layer-actions">
+            <input type="text" id="new-layer-name" placeholder="Nova camada" />
+            <button id="add-layer">Adicionar camada</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Aba Topologia -->
+    <section id="tab-topologia" class="tab-panel">
+      <div class="topology-container">
+        <div class="topology-controls">
+          <button id="regen-topology">Regenerar topologia</button>
+          <label>
+            Agrupar por
+            <select id="topology-grouping">
+              <option value="layer">Camada</option>
+              <option value="host">Host</option>
+            </select>
+          </label>
+        </div>
+        <div id="topology-view" class="topology-view"></div>
+      </div>
+    </section>
+
+    <!-- Aba Configuração -->
+    <section id="tab-configuracao" class="tab-panel">
+      <div class="config-container">
+        <div id="admin-warning" class="admin-warning hidden">Acesso restrito: somente administradores.</div>
+        <form id="config-form" class="hidden">
+          <fieldset>
+            <legend>Parâmetros gerais do módulo</legend>
+            <label>
+              Nível de log
+              <select id="log-level">
+                <option value="error">Error</option>
+                <option value="warn">Warn</option>
+                <option value="info" selected>Info</option>
+                <option value="debug">Debug</option>
+              </select>
+            </label>
+            <label>
+              Fonte de dados de hosts
+              <select id="host-source">
+                <option value="zabbix_api">Zabbix API</option>
+                <option value="custom">Custom</option>
+              </select>
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Configurações de visualização padrão</legend>
+            <label>
+              Mapa inicial
+              <input type="text" id="default-map-center" placeholder="lat,lng" value="-23.55,-46.63" />
+            </label>
+            <label>
+              Zoom
+              <input type="number" id="default-map-zoom" min="1" max="18" value="5" />
+            </label>
+            <label>
+              Máx. marcadores editáveis
+              <input type="number" id="default-max-markers" min="10" max="1000" value="100" />
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Permissões de acesso</legend>
+            <div id="permissions-list"></div>
+          </fieldset>
+
+          <div class="form-actions">
+            <button type="button" id="save-config" class="primary">Salvar configurações</button>
+            <button type="button" id="rollback-config">Reverter versão</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Aba Banco de Dados -->
+    <section id="tab-db" class="tab-panel">
+      <div class="config-container">
+        <h2><i class="fa-solid fa-database"></i> Configuração de Banco de Dados (MariaDB)</h2>
+        <form id="db-form">
+          <label>
+            <span><i class="fa-solid fa-server"></i> Host</span>
+            <input type="text" id="db-host" placeholder="localhost" />
+          </label>
+          <label>
+            <span><i class="fa-solid fa-database"></i> Nome do banco</span>
+            <input type="text" id="db-name" placeholder="modulebackbone_dev" />
+          </label>
+          <label>
+            <span><i class="fa-solid fa-user"></i> Usuário</span>
+            <input type="text" id="db-user" placeholder="modulebackbone_dev" />
+          </label>
+          <label>
+            <span><i class="fa-solid fa-key"></i> Senha</span>
+            <input type="password" id="db-pass" placeholder="••••••••" />
+            <small id="db-pass-info">Senha não configurada</small>
+          </label>
+          <div class="form-actions">
+            <button type="button" id="db-test"><i class="fa-solid fa-plug-circle-check"></i> Testar conexão</button>
+            <button type="button" id="db-save" class="primary"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kQmYAMG2f0z8rGI=" crossorigin=""></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/js/all.min.js"></script>
+  <!-- Adapter simples inspirado na estrutura leaflet-editable-polyline -->
+  <script src="js/polyline-editor-adapter.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/permissions.js"></script>
+  <script src="js/toast.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/backbone.js"></script>
+  <script src="js/topology.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/dbconfig.js"></script>
+  <script src="js/mapcenter.js"></script>
+  <!-- Modal para criar nova linha -->
+  <div id="line-modal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="line-modal-title">
+    <div class="modal-backdrop" data-close="modal"></div>
+    <div class="modal-content" role="document">
+      <div class="modal-header">
+        <h3 id="line-modal-title"><i class="fa-solid fa-plus"></i> Nova Linha</h3>
+        <button class="modal-close" aria-label="Fechar" data-close="modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="new-line-form">
+          <label>
+            Nome da linha
+            <input type="text" id="new-line-name" placeholder="Ex.: Rota MPLS Norte" required />
+          </label>
+          <label>
+            Host
+            <input type="text" id="new-line-host" placeholder="Nome ou ID do host" required />
+          </label>
+          <label>
+            Interface
+            <select id="new-line-interface" required>
+              <option value="in" selected>In</option>
+              <option value="out">Out</option>
+              <option value="sum">Soma</option>
+            </select>
+          </label>
+          <fieldset>
+            <legend>Traceroute opcional</legend>
+            <label>
+              Host destino
+              <input type="text" id="new-line-tr-target" placeholder="Ex.: 10.0.0.1" />
+            </label>
+            <label>
+              Limite de hops
+              <input type="number" id="new-line-tr-hops" min="1" value="30" />
+            </label>
+          </fieldset>
+        </form>
+      </div>
+      <div class="modal-actions">
+        <button class="secondary" data-close="modal">Cancelar</button>
+        <button id="confirm-add-line" class="primary"><i class="fa-solid fa-floppy-disk"></i> Salvar linha</button>
+      </div>
+    </div>
+  </div>
+  <script src="js/incidents.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
+    <!-- Aba Centro Inicial do Mapa -->
+    <section id="tab-mapcenter" class="tab-panel">
+      <div class="config-container">
+        <h2><i class="fa-solid fa-location-dot"></i> Centro Inicial do Mapa</h2>
+        <div id="mapcenter-admin-warning" class="admin-warning hidden">Acesso restrito: somente administradores.</div>
+        <form id="mapcenter-form" class="hidden" aria-describedby="mapcenter-admin-warning">
+          <fieldset>
+            <legend>Coordenadas iniciais</legend>
+            <label>
+              Latitude
+              <input type="number" id="mc-lat" min="-90" max="90" step="0.000001" required />
+            </label>
+            <label>
+              Longitude
+              <input type="number" id="mc-lng" min="-180" max="180" step="0.000001" required />
+            </label>
+          </fieldset>
+          <div class="mapcenter-preview">
+            <div id="mc-preview-map" class="map preview-map" aria-label="Prévia do centro do mapa"></div>
+          </div>
+          <div class="form-actions">
+            <button type="button" id="mc-save" class="primary"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
+          </div>
+        </form>
+      </div>
+    </section>
