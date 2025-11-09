@@ -1,0 +1,20 @@
+{
+  "manifest_version": 2.0,
+  "id": "siralgodar_backbone_map",
+  "name": "Backbone Map",
+  "namespace": "SirAlgodar\\BackboneMap",
+  "version": "0.1.0",
+  "description": "Visualização e edição de rotas de backbone com topologia derivada.",
+  "url": "https://github.com/SirAlgodar/ModuloZBX_Topologia_v2",
+  "assets": {
+    "js": ["assets/js/backbone.view.js.php"],
+    "css": ["assets/css/backbone.css"]
+  },
+  "actions": {
+    "module.backbone.map.view": {
+      "class": "BackboneView",
+      "view": "backbone.view",
+      "layout": "layout.htmlpage"
+    }
+  }
+}

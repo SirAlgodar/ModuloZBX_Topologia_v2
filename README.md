@@ -16,6 +16,33 @@ Documentação complementar:
 - API do backend: https://github.com/SirAlgodar/ModuloZBX_Topologia_v2/blob/main/backbone_map/docs/api.md
 - Instalação: https://github.com/SirAlgodar/ModuloZBX_Topologia_v2/blob/main/backbone_map/docs/installation.md
 
+### Integração como módulo oficial do Zabbix 7.0
+
+Este repositório inclui um esqueleto de módulo conforme a documentação oficial de módulos Zabbix 7.0:
+
+- Estrutura: `zabbix/ui/modules/siralgodar_backbone_map/`
+- Arquivos principais:
+  - `manifest.json` (metadados, actions e assets)
+  - `Module.php` (inicialização)
+  - `actions/BackboneView.php` (controller de view)
+  - `views/backbone.view.php` (view HTML)
+  - `assets/js/backbone.view.js.php` e `assets/css/backbone.css` (assets)
+
+Passos para registrar no frontend Zabbix:
+
+1) Copie a pasta `zabbix/ui/modules/siralgodar_backbone_map/` para o diretório de módulos do seu Zabbix, por exemplo: `zabbix/ui/modules/` na instalação do frontend.
+2) Com usuário Super Admin, acesse `Administração → Geral → Módulos` e clique em `Scan directory`.
+3) Localize `Backbone Map` e altere o estado para `Enabled`.
+4) Abra o módulo pelo link disponível ou inclua em uma área apropriada do frontend.
+
+Referências oficiais:
+- Estrutura do módulo: https://www.zabbix.com/documentation/7.0/en/devel/modules/file_structure
+- Manifest: https://www.zabbix.com/documentation/7.0/en/devel/modules/file_structure/manifest
+- Actions: https://www.zabbix.com/documentation/7.0/en/devel/modules/file_structure/actions
+- Views: https://www.zabbix.com/documentation/7.0/en/devel/modules/file_structure/views
+- Assets: https://www.zabbix.com/documentation/7.0/en/devel/modules/file_structure/assets
+- Registrar módulo: https://www.zabbix.com/documentation/7.0/en/devel/modules/file_structure/register
+
 ## Pré‑requisitos
 - Sistemas operacionais: macOS, Linux, Windows.
 - Navegador: Chrome/Firefox/Edge (recente).

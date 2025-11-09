@@ -1,0 +1,9 @@
+/* Estilos básicos do módulo Backbone Map (protótipo) */
+.zbx-backbone-map h2 {
+  font-weight: 600;
+  color: #111827;
+}
+
+[theme='dark-theme'] .zbx-backbone-map h2 {
+  color: #e5e7eb;
+}
